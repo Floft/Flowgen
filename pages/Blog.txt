@@ -1,0 +1,6 @@
+Title: Blog Post
+Created: 1249061192
+URL: /blog/post
+-
+<p>This is a photo.</p>
+<p>{{photo:something}} (see photo.plugin)</p>

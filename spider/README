@@ -1,0 +1,4 @@
+What to do:
+	php search.php	-- run the spider and insert text into the database
+	php check.php	-- check the pages for HTML errors
+	php urls.php	-- find all external URLs

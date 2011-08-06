@@ -1,0 +1,5 @@
+This is a script to generate a static HTML website from text files.
+
+Stuff:
+	spider -- a spider to crawl my website for a search database
+	flowgen -- a script to create a static HTML website from txt files

@@ -1,0 +1,434 @@
+#!/bin/bash
+d=1 #bool, debug mode
+force=0 #force to update
+blogmax=6 #posts per blog page
+rssfeedmax=15 #posts for rss feed
+menu="flowgen.menu"
+footer="flowgen.footer"
+config="flowgen.config"
+cache="flowgen.cache"
+list="flowgen.list"
+blognote="flowgen.blog"
+input="/home/garrett/Documents/Floft"
+output="/home/floft/www"
+[ -z "$MAXTHREADS" ] && MAXTHREADS=15
+[ -z "$TMP" ] && tmpdir="/tmp" || tmpdir="$TMP"
+
+blankwarn() {
+	echo "Warning: Skipping $2 because $1 is blank"
+}
+warntheme() {
+	echo "Warning: 'themes/$1' does not exist, $2 will not be used."
+}
+getvars() {
+	#Title:		title
+	#Created:	1234567890
+	#Modified:	1234567890
+	#Theme:		default
+	#URL:		the url
+	#- (or any number of -'s)
+
+	local file="$1"
+	local vars="$(head -n $(($(grep -nm 1 '^-' "$file"	| sed 's/:.*//g')-1)) "$file")"
+	Title="$(grep -m 1 "^Title: "<<<"$vars"			| sed -r 's/^[^:]*: ?//g')"
+	Created="$(grep -m 1 "^Created: "<<<"$vars"		| sed -r 's/^[^:]*: ?//g')"
+	Modified="$(grep -m 1 "^Modified: "<<<"$vars"		| sed -r 's/^[^:]*: ?//g')"
+	Theme="$(grep -m 1 "^Theme: "<<<"$vars"			| sed -r 's/^[^:]*: ?//g')"
+	URL="$(grep -m 1 "^URL: "<<<"$vars"			| sed -r 's/^[^:]*: ?//g')"
+	Options="$(grep -m 1 "^Options: "<<<"$vars"		| sed -r 's/^[^:]*: ?//g')"
+
+	#required
+	[ -z "$Title" ]		&& blankwarn "Title" "$file"	&& return 1
+	[ -z "$Created" ]	&& blankwarn "Created" "$file"	&& return 1
+	[ -z "$URL" ]		&& blankwarn "URL" "$file"	&& return 1
+	#optional
+	[ -z "$Theme" ]		&& Theme="default"
+	[ -z "$Modified" ]	&& Modified="$(stat --printf='%Y' "$file")"
+
+	return 0
+}
+streplace() {
+	local title="${1//#/\\#}"
+	local url="$2"
+	local stdin="$(cat)"
+	local menu="$(tr -d '\r\n' < "$input/$menu" | sed "s#href=\"${url//$blogURL\/1/$blogURL}\"#& id=\"current\"#g")"
+	local footer="$(tr -d '\r\n' < "$input/$footer")"
+	local date="$(awk '{print strftime("%B %e, %Y at %I:%M%P",$1)}'<<<"$3")"
+
+	#only have the long one in the <title> tag
+	local prefix="$(getsetting title prefix)"
+	local suffix="$(getsetting title suffix)"
+	[ "$url" == "/" ] && \
+		local longtitle="$(getsetting title home)" || \
+		local longtitle="$prefix$title$suffix"
+
+	title="${title//&/\\&}"
+	menu="${menu//&/\\&}"
+	menu="${menu//#/\\#}"
+	footer="${footer//&/\\&}"
+	footer="${footer//#/\\#}"
+	longtitle="${longtitle//&/\\&}"
+	longtitle="${longtitle//#/\\#}"
+
+	#standard replacements
+	stdin="$(sed "s#{{page:url}}#${url//\"/\\\"}#g" <<<"$stdin")"
+	stdin="$(sed "s#{{page:title}}#${title//\"/\\\"}#g" <<<"$stdin")"
+	stdin="$(sed "s#{{page:longtitle}}#${longtitle//\"/\\\"}#g" <<<"$stdin")"
+	stdin="$(sed "s#{{page:menu}}#${menu//\"/\\\"}#g" <<<"$stdin")"
+	stdin="$(sed "s#{{page:footer}}#${footer//\"/\\\"}#g" <<<"$stdin")"
+	stdin="$(sed "s#{{page:date}}#${date//\"/\\\"}#g" <<<"$stdin")"
+
+	#from config file
+	IFS=$'\n'
+	for i in $(grep -Eo "\{\{[^}]+:[^}]+\}\}" <<<"$stdin" | tr -d '{}' | sort -u); do
+		local section="$(cut -d: -f1<<<"$i")"
+		local variable="$(cut -d: -f2<<<"$i")"
+		local value="$(getsetting "$section" "$variable")"
+
+		if [ -n "$value" ]; then
+			value="${value//#/\\#}"
+			stdin="$(sed "s#{{$i}}#${value//\"/\\\"}#g" <<<"$stdin")"
+		else
+			((d)) && echo "Warning: unknown replacement in theme {{$i}}" >&2
+		fi
+	done
+
+	echo "$stdin"
+}
+applyplugin() {
+	local stdin="$(cat)"
+
+	IFS=$'\n'
+	for i in $(grep -Eo "\{\{[^}]+:[^}]+\}\}" <<<"$stdin" | tr -d '{}' | sort -u); do
+		local plugin="$(cut -d: -f1<<<"$i")"
+		local options="$(cut -d: -f2<<<"$i")"
+		local files="$(find "$input" -name "$plugin.plugin")"
+
+		if [ -n "$files" ]; then
+			local value="$(cat "$files")"
+			local number=$(grep -o , <<<"$options"|wc -l)
+			number=$(($number+1))
+
+			for opt in $(seq 1 $number); do
+				local replace="$(cut -d, -f$opt <<<"$options")"
+				replace="${replace//#/\\#}"
+				replace="${replace//&/\\&}"
+				local value="$(sed "s#{{plugin:$opt}}#$replace#g"<<<"$value")"
+			done
+
+			value="${value//#/\\#}"
+			value="${value//&/\\&}"
+			stdin="$(sed "s#{{$i}}#${value//\"/\\\"}#g" <<<"$stdin")"
+			#when not specified, default to blank
+			stdin="$(sed "s#{{plugin:[^}]*}}##g" <<<"$stdin")"
+		else
+			((d)) && echo "Warning: unknown plugin {{$i}}" >&2
+		fi
+	done
+
+	echo "$stdin"
+}
+applytheme() {
+	local file="$1"
+	local theme="$2"
+	local title="$3"
+	local url="$4"
+	local date="$5"
+	local options="$6"
+
+	#if the theme is "none", why waste processing power?
+	if [ "$theme" != "none" ]; then
+		local directory="$(getsetting themes "$theme")"
+
+		[ -z "$directory" ] && echo "Warning: $theme not specified in config ($input/$config)" && return 1
+		[ ! -e "$input/themes/$directory" ] && warntheme "$input/themes/$directory" "$theme" && return 1
+	
+		local tmp="$(mktemp --suffix=_flowgen_$$)"
+		local head="$(grep "^head=" "$input/themes/$directory/theme.config" | cut -d= -f2)"
+		local foot="$(grep "^foot=" "$input/themes/$directory/theme.config" | cut -d= -f2)"
+		[ ! -e "$input/themes/$directory/$head" ] && warntheme "$input/themes/$directory/$head" "$theme" && return 1
+		[ ! -e "$input/themes/$directory/$foot" ] && warntheme "$input/themes/$directory/$foot" "$theme" && return 1
+
+		#Options: notitle
+		grep "notitle" <<<"$options" &>/dev/null && sedstr1='s#\{\{title}}.*\{\{/title\}\}##g' || sedstr1='s#\{\{/?title\}\}##g'
+		#Options: nocanonical
+		grep "nocanonical" <<<"$options" &>/dev/null && sedstr2='s#\{\{canonical}}.*\{\{/canonical\}\}##g' || sedstr2='s#\{\{/?canonical\}\}##g'
+
+		mv "$file" "$tmp"
+		sed -r "$sedstr1
+		$sedstr2" "$input/themes/$directory/$head" | tr -s '\r\n' | streplace "$title" "$url" "$date" > "$file"
+		applyplugin < "$tmp" >> "$file"
+		streplace "$title" "$url" "$date" < "$input/themes/$directory/$foot" >> "$file"
+
+		rm "$tmp"
+	fi
+}
+getsetting() { #1=section, 2=variable ([section]\nvariable=value)
+	local section="$1"
+	local variable="$2"
+
+	#the [section] we want and the next one
+	local sections="$(grep -En "^\[[a-zA-Z]+\]$" "$input/$config" | grep -A 1 "\[$section\]$")"
+
+	#exit instead of hanging
+	[ -z "$sections" ] && return 1
+
+	#the line number of the [section] we want
+	local one="$(head -n 1 <<<"$sections" | cut -d: -f1)"
+	
+	#the line number of the next section
+	local two="$(head -n 2 <<<"$sections" | tail -n 1 | cut -d: -f1)"
+
+	#get the variables in this section
+	if [ "$one" == "$two" ]; then
+		local variables="$(tail -n +$(($one+1)) "$input/$config")"
+	else
+		local variables="$(tail -n +$(($one+1)) "$input/$config" | head -n $(($two-$one-2)))"
+	fi
+
+	#get the variable we want, if it exists
+	local string="$(grep "^$variable="<<<"$variables")"
+	
+	#not set
+	[ -z "$string" ] && return 1
+
+	#found
+	echo "$(cut -d= -f2<<<"$string")"
+}
+processfiles() {
+	for file; do
+		if [ "$force" != "1" ]; then
+			local md5sum_new="$(grep "$file$" < "$tmp_cache" | cut -d' ' -f1)"
+			local md5sum_old="$(grep "$file$" < "$input/$cache" | cut -d' ' -f1)"
+		fi
+
+		if [ -e "$file" ]; then
+			if getvars "$file"; then
+				((d)) && ((force)) && echo "Notice: processing $file"
+				local ext="$(sed 's/.*\.//g'<<<"$file")"
+				local dir="$(sed -r 's#/?(.*)/[^/]+$#\1#g'<<<"$URL")"
+				local postURL="$(sed 's#^/##g'<<<"$URL")"
+				local out="$output/$postURL"
+				
+				[ "$ext" != "php" ] && ext="html"
+				[ "$URL" == "/" ] && out="$output/index.$ext" || out="$out.$ext"
+
+				mkdir -p "$output/$dir"
+				contents="$(tail -n +$(($(grep -nm 1 '^-' "$file" | sed 's/:.*//g')+1)) "$file")"
+
+				#only show created date for blog; use rss template and blog post template
+				if grep "^/blog" <<<"$URL" &>/dev/null; then
+					local postBody="$(applyplugin <<<"$contents")"
+					local postBodywhite="$(sed 's/_round\.jpg/_round.white.jpg/g'<<<"$postBody")"
+					local postDate="$(awk '{print strftime("%a, %d %b %Y %H:%M:%S %z",$1)}'<<<"$Created")"
+					Date="$Created"
+					cat > "$tmpdir/rss_flowgen_$$_$Created" <<EOF
+<item>
+	<title>$Title</title>
+	<link>http://$siteURL/$postURL</link>
+	<description>
+	<![CDATA[
+		$postBodywhite
+	]]>
+	</description>
+	<pubDate>$postDate</pubDate>
+	<dc:creator>$blogAuthor</dc:creator>
+	<guid isPermaLink="false">$postURL at http://$siteURL/</guid>
+</item>
+EOF
+					
+					#blog post template
+					local directory="$(getsetting themes "$Theme")"
+					local templatefile_head="$(grep "^blog_head=" "$input/themes/$directory/theme.config" | cut -d= -f2)"
+					local templatefile_foot="$(grep "^blog_foot=" "$input/themes/$directory/theme.config" | cut -d= -f2)"
+					if [ ! -e "$input/themes/$directory/$templatefile_head" ]; then
+						echo "Warning: blog template for $Theme '$input/themes/$directory/$templatefile_head' does not exist."
+					elif [ ! -e "$input/themes/$directory/$templatefile_foot" ]; then
+						echo "Warning: blog template for $Theme '$input/themes/$directory/$templatefile_foot' does not exist."
+					else
+						local template_head="$input/themes/$directory/$templatefile_head"
+						local template_foot="$input/themes/$directory/$templatefile_foot"
+						local head="$(streplace "$Title" "$URL" "$Date" < "$template_head")"
+						local foot="$(streplace "$Title" "$URL" "$Date" < "$template_foot")"
+
+						echo "$head$postBody$foot" > "$tmpdir/blog_flowgen_$$_$Created"
+					fi
+				else
+					Date="$Modified"
+				fi
+				
+				#only process if updated
+				if [ "$force" == "1" ] || [ "$md5sum_new" != "$md5sum_old" ]; then
+					echo "$contents" > "$out"
+					applytheme "$out" "$Theme" "$Title" "$URL" "$Date" "$Options"
+					! ((force)) &&	echo "Notice: changed   - $file"
+				else
+					((d)) &&	echo "Notice: no change - $file"
+				fi
+				
+				#this file is supposed to exist (cleanup files that used to exist)
+				echo "$out" >> "$input/$list.new"
+			fi
+		else
+			echo "Warning: $file not found"
+		fi
+	done
+}
+
+#for testing functions
+[ "$1" == "--source" ] && return 0
+
+#don't continue if it won't work
+for i in "$menu" "$footer" "$config"; do
+	[ ! -e "$input/$i" ] && echo "Error: $input/$i does not exist!" && exit 1
+done
+for i in sed grep awk stat comm; do
+	type "$i" &>/dev/null || ( echo "Error: '$i' is not installed!" && exit 1 )
+done
+
+[ ! -e "$input/$cache" ] && { touch "$input/$cache" || { echo "Error: could not create '$input/$cache'"; exit 1; }; }
+
+
+#copy themes
+rm -rf "$output/themes"
+cp -r "$input/themes" "$output/"
+
+#only one page
+if [ "$1" == "-f" ]; then
+	shift
+	force=1
+	processfiles $@
+
+	#cleanup list file
+	temp="$(mktemp --suffix=_flowgen_$$_uniq)"
+	sort -u < "$input/$list" > "$temp"
+	mv "$temp" "$input/$list"
+	rm "$tmpdir/"*_flowgen_$$* &>/dev/null
+
+	exit 0
+
+#probably was intending to do only one page
+elif [ -n "$1" ]; then
+	echo "Usage: flowgen [-f file1 file2 ...]"
+	exit 0
+fi
+
+#cleanup old file(s)
+rm "$input/$list.new" &>/dev/null
+
+#rss feed
+siteURL="$(getsetting site url|sed 's#http://##g')"
+blogURL="$(getsetting blog url|sed 's#^/##g')"
+blogTitle="$(getsetting blog title)"
+blogDesc="$(getsetting blog desc)"
+blogRSS="$(getsetting blog rss|sed 's#^/##g')"
+blogAuthor="$(getsetting blog author)"
+blogUpdated="$(date +"%a, %d %b %Y %H:%M:%S %z")"
+rssfeedreal="$output/$(getsetting blog realrss|sed 's#^/##g')"
+
+#cache so it is even faster
+tmp_cache="$(mktemp --suffix=_flowgen_$$)"
+find "$input" -iname '*.txt' -exec md5sum {} + -or -iname '*.php' -exec md5sum {} + > "$tmp_cache"
+
+#multithreaded, make it fast[er]
+kill_list=""
+files="$(grep -R "^Created: " "$input" | grep -E "\.(txt|php):" | sed -r 's/(.*):Created: (.*)/\2\t\1/g' | sort -r | cut -f2)"
+trap "kill \$kill_list &>/dev/null; rm "$tmpdir"/*_flowgen_$$* &>/dev/null; exit 1" 2 15
+threads=()
+number=0
+for i in $files; do #split files for diff threads
+	threads[$number]="$i ${threads[$number]}"
+	[ "$number" == "$MAXTHREADS" ] && number=0 || number=$(($number+1))
+done
+for i in ${!threads[@]}; do #create threads
+	files="${threads[$i]}"
+	processfiles $files &
+	kill_list="$! $kill_list"
+done
+while (( $(jobs|wc -l) > 0 )); do #wait for threads
+	sleep 0.05
+	jobs &>/dev/null
+done
+trap - 2 15
+
+#finish creating the feed
+cat > "$rssfeedreal" <<EOF
+<?xml version="1.0" encoding="utf-8" ?><rss version="2.0" xml:base="http://$siteURL/$blogURL" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel>
+<title>$blogTitle</title>
+<link>http://$siteURL/$blogURL</link>
+<description>$blogDesc</description>
+<language>en</language>
+<lastBuildDate>$blogUpdated</lastBuildDate>
+EOF
+cat $(ls "$tmpdir"/rss_flowgen_$$_* | sort -r | head -n $rssfeedmax) >> "$rssfeedreal"
+cat >> "$rssfeedreal" <<EOF
+</channel>
+</rss>
+EOF
+
+#create the /blog/posts
+mkdir -p "$output/$blogURL"
+echo "DirectoryIndex 1.html" > "$output/$blogURL/.htaccess"
+loops=1
+number=$(ls "$tmpdir"/blog_flowgen_$$_* | wc -l)
+positions=$(seq 1 $blogmax $number)
+pages=$(wc -l<<<"$positions")
+nbsp="$(for i in {0..7}; do echo -n "&nbsp;"; done)"
+
+for i in $positions; do
+	out="$output/$blogURL/$loops.html"
+	blogtext=""
+
+	if [ "$loops" == "1" ]; then
+		page_title="$blogTitle"
+		blogtext="$(cat "$input/$blognote")"
+	else
+		page_title="$blogTitle - Page $loops"
+	fi
+
+	echo "<div class=\"title\">$page_title <a href=\"/$blogRSS\"><img src=\"/images/site/feed.png\" alt=\"RSS\" /></a></div>$blogtext" > "$out"
+	cat $(ls "$tmpdir"/blog_flowgen_$$_* | sort -r | tail -n +$i | head -n $blogmax) >> "$out"
+	
+	if [ "$pages" != "1" ]; then
+		if [ "$loops" == "1" ]; then
+			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:right\"><a href=\"/$blogURL/$(($loops+1))\">Older &#8250;</a>$nbsp<a href=\"/$blogURL/$pages\">Oldest &#187;</a></span></div>" >> "$out"
+		elif [ "$loops" == "$pages" ]; then
+			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:left\"><a href=\"/$blogURL/1\">&#171; Newest</a>$nbsp<a href=\"/$blogURL/$(($loops-1))\">&#8249; Newer</a></span></div>">> "$out"
+		else
+			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:left\"><a href=\"/$blogURL/1\">&#171; Newest</a>$nbsp<a href=\"/$blogURL/$(($loops-1))\">&#8249; Newer</a></span> <span style=\"float:right\"><a href=\"/$blogURL/$(($loops+1))\">Older &#8250;</a>$nbsp<a href=\"/$blogURL/$pages\">Oldest &#187;</a></span></div>" >> "$out"
+
+		fi
+	fi
+
+	((d)) && echo "Notice: processing $blogURL page $loops"
+	echo "$out" >> "$input/$list.new"
+	applytheme "$out" default "$page_title" "/$blogURL/$loops" null notitle
+	loops=$(($loops+1))
+done
+
+
+#clean up files created before that were since removed
+list_tmp1="$(mktemp --suffix=_flowgen_$$)"
+list_tmp2="$(mktemp --suffix=_flowgen_$$)"
+sort "$input/$list" > "$list_tmp1"
+sort "$input/$list.new" > "$list_tmp2"
+mv "$list_tmp1" "$input/$list"
+mv "$list_tmp2" "$input/$list.new"
+for i in $(comm -23 "$input/$list" "$input/$list.new"); do
+	((d)) && echo "Notice: deleting $i"
+	rm "$i"
+done
+mv "$input/$list.new" "$input/$list"
+
+#clean
+mv "$tmp_cache" "$input/$cache"
+rm "$tmpdir/"*_flowgen_$$* &>/dev/null
+
+#update stuff
+/scripts/website/recentimage
+/scripts/website/recentstuff
+/scripts/website/sitemap
+
+#update search
+[ -e "$input/spider/search.php" ] && php "$input/spider/search.php" || echo "Warning: '$input/search.php' not found, won't update search"

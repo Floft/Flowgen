@@ -1,5 +1,6 @@
 <?php
 /* Look at search.php, check.php, and urls.php for examples.
+   Requires: curl (php-curl on arch & uncomment the thing in php.ini)
    Usage:
 
 require_once "spider.php";

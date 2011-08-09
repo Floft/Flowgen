@@ -15,12 +15,12 @@ class whatever extends Spider
 		$this->blah = $blah;
 	}
 
-	public function use_data($url, $text, $html)
+	protected function use_data($url, $text, $html)
 	{
 		echo "URL: $url\n";
 	}
 
-	public function cleanup()
+	protected function cleanup()
 	{
 		//finished
 	}
@@ -39,6 +39,8 @@ class Spider
 	private $maxForwards=10;
 	private $startURLs;
 	private $replaceURLs;
+
+	//look into: http://www.php.net/manual/en/language.oop5.abstract.php
 	
 	public function __construct($startURLs, $replaceURLs=array(), $UA="Flowgen/1.0 (http://floft.net/)") {
 		if (!is_array($startURLs))
@@ -80,15 +82,15 @@ class Spider
 		$this->cleanup();
 	}
 	
-	public function use_data($url,$title,$text) {
+	protected function use_data($url,$title,$text) {
 		die("Replace Spider::use_data() with something else.");
 	}
 	
-	public function cleanup() {
+	protected function cleanup() {
 		die("Replace Spider::cleanup() with something else.");
 	}
 	
-	private function parse($url) {
+	protected function parse($url) {
 		$images=array();
 		$canonical=false;
 		list($url,$html) = $this->load($url,true);
@@ -153,7 +155,7 @@ class Spider
 		return $url;
 	}
 
-	public function absolutify($from,$url) {
+	protected function absolutify($from,$url) {
 		$url=trim($url);
 		$from=trim($from);
 		
@@ -205,7 +207,7 @@ class Spider
 		return trim($url);
 	}
     
-	public function right_type($url) {
+	protected function right_type($url) {
 		$bad=array("7z", "aif", "aiff", "asf", "atom", "au", "aup", "avi", "bin", "blend", "bmp", "bz2", "cr2", "dcr", "dng", "doc", "dv", "exe", "exr", "flac", "flv", "gif", "gz", "ico", "iso", "jar", "jpeg", "jpg", "m3u", "m4v", "mid", "midi", "mmpz", "mov", "mp2", "mp3", "mp4", "mpa", "mpeg", "mpg", "mpz", "nef", "ogg", "pbm", "pcx", "pdf", "pef", "png", "pnm", "ppm", "ra", "ram", "rgb", "sr2", "svg", "swf", "tar", "tga", "tif", "tiff", "ttf", "vrml", "wav", "wma", "wmp", "wmv", "xcf", "xz", "zip");
 
 		$return=true;
@@ -223,7 +225,7 @@ class Spider
 		return $return;
 	}
 	
-	public function right_site($url) {
+	protected function right_site($url) {
 		$return = false;
 		$sites=$this->startURLs;
 		
@@ -238,7 +240,7 @@ class Spider
 		return $return;
 	}
 	
-	public function replace_sites($url,$reverse=false) {
+	protected function replace_sites($url,$reverse=false) {
 		$replace=$this->replaceURLs;
 		$modurl=$url;
 	
@@ -252,7 +254,7 @@ class Spider
 		return $modurl;
 	}
 	
-	public function in_robots($url) {
+	protected function in_robots($url) {
 		$return=false;
 		$host = preg_replace("#https?://([^/]+).*#i",'\1',$url);
 		//$url_nohost=preg_replace("#^https?://[^/]+(.*)$#im",'\1',$url);
@@ -270,7 +272,7 @@ class Spider
 		return $return;
 	}
 	
-	public function robots($baseurl) {
+	protected function robots($baseurl) {
 		$site = preg_replace("#https?://([^/]+).*#i",'\1',$baseurl);
 		$disallow=array();
 		$starturl="http://$site";
@@ -315,7 +317,7 @@ class Spider
 		}
 	}
 	
-	public function getText($html) {
+	protected function getText($html) {
 		$text=trim(
 				  str_replace("\n"," ",
 				  str_replace("\t"," ",
@@ -335,7 +337,7 @@ class Spider
 		return $text;
 	}
 	
-	public function getURLs($url,$dom) {
+	protected function getURLs($url,$dom) {
 		foreach ($dom->getElementsByTagName('a') as $item) {
 			$new_url=$item->getAttribute('href');
 			
@@ -355,7 +357,7 @@ class Spider
 	}
 	
 	
-	public function load($uri,$return_url=false,$times=0) {
+	protected function load($uri,$return_url=false,$times=0) {
 		$uri_new=$this->replace_sites($uri);
 		
 		//load it

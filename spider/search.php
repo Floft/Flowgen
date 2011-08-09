@@ -11,7 +11,7 @@ class UpdateSearch extends Spider
 	private $sql;
 	private $table;
 	
-	public function __construct($startURLs,$replaceURLs,$mysql=array())
+	protected function __construct($startURLs,$replaceURLs,$mysql=array())
 	{
 		parent::__construct($startURLs,$replaceURLs);
 		
@@ -26,7 +26,7 @@ class UpdateSearch extends Spider
 		$this->sql=$db;
 	}
 	
-	public function use_data($url,$text,$html)
+	protected function use_data($url,$text,$html)
 	{
 		$table=$this->table;
 
@@ -69,7 +69,7 @@ class UpdateSearch extends Spider
 		}
 	}
 	
-	public function cleanup()
+	protected function cleanup()
 	{
 		mysql_close();
 	}

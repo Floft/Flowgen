@@ -8,7 +8,7 @@ require_once "settings.php";
 
 class URLs extends Spider
 {
-	public function getURLs($url,$dom)
+	protected function getURLs($url,$dom)
 	{
 		parent::getURLs($url,$dom);
 
@@ -21,9 +21,9 @@ class URLs extends Spider
 		}
 	}
 
-	public function use_data($url, $text, $html) { }
+	protected function use_data($url, $text, $html) { }
 
-	public function cleanup() { }
+	protected function cleanup() { }
 }
 
 $spider = new URLs($startURLs, $replaceURLs);

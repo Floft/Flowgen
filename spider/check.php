@@ -10,7 +10,7 @@ require_once "settings.php";
 
 class Check extends Spider
 {
-	public function use_data($url, $text, $html) {
+	protected function use_data($url, $text, $html) {
 		if ($this->in_robots($url)||strpos($html,"</html>")===false||empty($html)) {
 			echo "Notice: skipping $url\n";
 		} else {
@@ -19,7 +19,7 @@ class Check extends Spider
 		}
 	}
 
-	public function cleanup() { }
+	protected function cleanup() { }
 }
 
 $spider = new Check($startURLs, $replaceURLs);

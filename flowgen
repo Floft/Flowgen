@@ -195,6 +195,23 @@ getsetting() { #1=section, 2=variable ([section]\nvariable=value)
 	#found
 	echo "$(cut -d= -f2<<<"$string")"
 }
+blog_output() {
+	local Created="$1"
+	local digit=0
+	local output="blog_flowgen_$$_$Created"
+
+	if [[ -e $output ]]; then
+		while true; do
+			((++digit))
+			
+			if [[ ! -e ${output}_$digit ]]; then
+				output="${output}_$digit"
+			fi
+		done
+	fi
+
+	echo "$output"
+}
 processfiles() {
 	for file; do
 		if [ "$force" != "1" ]; then
@@ -251,7 +268,7 @@ EOF
 						local head="$(streplace "$Title" "$URL" "$Date" < "$template_head")"
 						local foot="$(streplace "$Title" "$URL" "$Date" < "$template_foot")"
 
-						echo "$head$postBody$foot" > "$tmpdir/blog_flowgen_$$_$Created"
+						echo "$head$postBody$foot" > "$tmpdir/$(blog_output "$Created")"
 					fi
 				else
 					Date="$Modified"

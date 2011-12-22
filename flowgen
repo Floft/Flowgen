@@ -195,10 +195,11 @@ getsetting() { #1=section, 2=variable ([section]\nvariable=value)
 	#found
 	echo "$(cut -d= -f2<<<"$string")"
 }
-blog_output() {
-	local Created="$1"
+tmp_output() {
+	local Prefix="$1"
+	local Created="$2"
 	local digit=0
-	local output="blog_flowgen_$$_$Created"
+	local output="$tmpdir/${Prefix}_flowgen_$$_$Created"
 
 	if [[ -e $output ]]; then
 		while true; do
@@ -206,6 +207,7 @@ blog_output() {
 			
 			if [[ ! -e ${output}_$digit ]]; then
 				output="${output}_$digit"
+				break
 			fi
 		done
 	fi
@@ -239,7 +241,7 @@ processfiles() {
 					local postBodywhite="$(sed 's/_round\.jpg/_round.white.jpg/g'<<<"$postBody")"
 					local postDate="$(awk '{print strftime("%a, %d %b %Y %H:%M:%S %z",$1)}'<<<"$Created")"
 					Date="$Created"
-					cat > "$tmpdir/rss_flowgen_$$_$Created" <<EOF
+					cat > "$(tmp_output rss "$Created")" <<EOF
 <item>
 	<title>$Title</title>
 	<link>http://$siteURL/$postURL</link>
@@ -268,7 +270,7 @@ EOF
 						local head="$(streplace "$Title" "$URL" "$Date" < "$template_head")"
 						local foot="$(streplace "$Title" "$URL" "$Date" < "$template_foot")"
 
-						echo "$head$postBody$foot" > "$tmpdir/$(blog_output "$Created")"
+						echo "$head$postBody$foot" > "$(tmp_output blog "$Created")"
 					fi
 				else
 					Date="$Modified"

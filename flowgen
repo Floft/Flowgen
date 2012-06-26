@@ -193,7 +193,7 @@ getsetting() { #1=section, 2=variable ([section]\nvariable=value)
 	[ -z "$string" ] && return 1
 
 	#found
-	echo "$(cut -d= -f2<<<"$string")"
+	echo "$(sed -r 's/^[^=]+=//g'<<<"$string")"
 }
 tmp_output() {
 	local Prefix="$1"
@@ -325,10 +325,11 @@ if [ "$1" == "-f" ]; then
 	rm "$tmpdir/"*_flowgen_$$* &>/dev/null
 
 	exit 0
-
+elif [[ $1 == --force ]]; then
+	force=1
 #probably was intending to do only one page
 elif [ -n "$1" ]; then
-	echo "Usage: flowgen [-f file1 file2 ...]"
+	echo "Usage: flowgen [--force | -f file1 file2 ...]"
 	exit 0
 fi
 
@@ -341,6 +342,7 @@ blogURL="$(getsetting blog url|sed 's#^/##g')"
 blogTitle="$(getsetting blog title)"
 blogDesc="$(getsetting blog desc)"
 blogRSS="$(getsetting blog rss|sed 's#^/##g')"
+blogEmail="$(getsetting blog email|sed 's#^/##g')"
 blogAuthor="$(getsetting blog author)"
 blogUpdated="$(date +"%a, %d %b %Y %H:%M:%S %z")"
 rssfeedreal="$output/$(getsetting blog realrss|sed 's#^/##g')"
@@ -406,7 +408,7 @@ for i in $positions; do
 		page_title="$blogTitle - Page $loops"
 	fi
 
-	echo "<div class=\"title\">$page_title <a href=\"/$blogRSS\"><img src=\"/images/site/feed.png\" alt=\"RSS\" /></a></div>$blogtext" > "$out"
+	echo "<div class=\"title\">$page_title <a href=\"/$blogRSS\"><img src=\"/images/site/feed.png\" alt=\"Subscribe via RSS\" /></a> <a href=\"$blogEmail\"><img src=\"/images/site/mail.png\" alt=\"Subscribe via Email\" /></a></div>$blogtext" > "$out"
 	cat $(ls "$tmpdir"/blog_flowgen_$$_* | sort -r | tail -n +$i | head -n $blogmax) >> "$out"
 	
 	if [ "$pages" != "1" ]; then

@@ -408,7 +408,7 @@ for i in $positions; do
 		page_title="$blogTitle - Page $loops"
 	fi
 
-	echo "<div class=\"title\">$page_title <a href=\"/$blogRSS\"><img src=\"/images/site/feed.png\" alt=\"Subscribe via RSS\" target=\"_blank\" /></a> <a href=\"$blogEmail\" target=\"_blank\"><img src=\"/images/site/mail.png\" alt=\"Subscribe via Email\" /></a></div>$blogtext" > "$out"
+	echo "<div class=\"title\">$page_title <a href=\"/$blogRSS\" target=\"_blank\"><img src=\"/images/site/feed.png\" alt=\"Subscribe via RSS\" /></a> <a href=\"$blogEmail\" target=\"_blank\"><img src=\"/images/site/mail.png\" alt=\"Subscribe via Email\" /></a></div>$blogtext" > "$out"
 	cat $(ls "$tmpdir"/blog_flowgen_$$_* | sort -r | tail -n +$i | head -n $blogmax) >> "$out"
 	
 	if [ "$pages" != "1" ]; then

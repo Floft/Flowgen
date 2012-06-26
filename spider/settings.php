@@ -14,7 +14,7 @@ $startURLs=array(
 );
 //if this is hosted locally, load the local version to speed things up
 $replaceURLs=array(
-	array("www.floft.net", "www.wopto.net")
+	array("www.floft.net", "localhost")
 );
 $mysql=array(
 	"localhost", //host

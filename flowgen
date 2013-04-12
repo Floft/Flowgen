@@ -11,7 +11,7 @@ list="flowgen.list"
 blognote="flowgen.blog"
 input="/home/garrett/Documents/Floft"
 output="/home/floft/www"
-[ -z "$MAXTHREADS" ] && MAXTHREADS=15
+[ -z "$MAXTHREADS" ] && MAXTHREADS=8
 [ -z "$TMP" ] && tmpdir="/tmp" || tmpdir="$TMP"
 
 blankwarn() {
@@ -238,7 +238,7 @@ processfiles() {
 				#only show created date for blog; use rss template and blog post template
 				if grep "^/blog" <<<"$URL" &>/dev/null; then
 					local postBody="$(applyplugin <<<"$contents")"
-					local postBodywhite="$(sed 's/_round\.jpg/_round.white.jpg/g'<<<"$postBody")"
+					local postBodyabsolute="$(sed -r "s#(src|href)=\"/#\1=\"http://$siteURL/#g"<<<"$postBody")"
 					local postDate="$(awk '{print strftime("%a, %d %b %Y %H:%M:%S %z",$1)}'<<<"$Created")"
 					Date="$Created"
 					cat > "$(tmp_output rss "$Created")" <<EOF
@@ -247,7 +247,7 @@ processfiles() {
 	<link>http://$siteURL/$postURL</link>
 	<description>
 	<![CDATA[
-		$postBodywhite
+		$postBodyabsolute
 	]]>
 	</description>
 	<pubDate>$postDate</pubDate>
@@ -413,11 +413,11 @@ for i in $positions; do
 	
 	if [ "$pages" != "1" ]; then
 		if [ "$loops" == "1" ]; then
-			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:right\"><a href=\"/$blogURL/$(($loops+1))\">Older &#8250;</a>$nbsp<a href=\"/$blogURL/$pages\">Oldest &#187;</a></span></div>" >> "$out"
+			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:right\"><a href=\"/$blogURL/$(($loops+1))\" rel=\"next\">Older &#8250;</a>$nbsp<a href=\"/$blogURL/$pages\">Oldest &#187;</a></span></div>" >> "$out"
 		elif [ "$loops" == "$pages" ]; then
-			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:left\"><a href=\"/$blogURL/1\">&#171; Newest</a>$nbsp<a href=\"/$blogURL/$(($loops-1))\">&#8249; Newer</a></span></div>">> "$out"
+			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:left\"><a href=\"/$blogURL/1\">&#171; Newest</a>$nbsp<a href=\"/$blogURL/$(($loops-1))\" rel=\"prev\">&#8249; Newer</a></span></div>">> "$out"
 		else
-			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:left\"><a href=\"/$blogURL/1\">&#171; Newest</a>$nbsp<a href=\"/$blogURL/$(($loops-1))\">&#8249; Newer</a></span> <span style=\"float:right\"><a href=\"/$blogURL/$(($loops+1))\">Older &#8250;</a>$nbsp<a href=\"/$blogURL/$pages\">Oldest &#187;</a></span></div>" >> "$out"
+			echo "<div class=\"pages\" style=\"height:25px;\"><span style=\"float:left\"><a href=\"/$blogURL/1\">&#171; Newest</a>$nbsp<a href=\"/$blogURL/$(($loops-1))\" rel=\"prev\">&#8249; Newer</a></span> <span style=\"float:right\"><a href=\"/$blogURL/$(($loops+1))\" rel=\"next\">Older &#8250;</a>$nbsp<a href=\"/$blogURL/$pages\">Oldest &#187;</a></span></div>" >> "$out"
 
 		fi
 	fi

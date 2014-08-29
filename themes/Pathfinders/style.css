@@ -1,0 +1,167 @@
+body {
+    margin:0px;
+    background-color: #6699cc;
+    font-family: "Times New Roman";
+    color: #000000;
+}
+
+div.title {
+    font-size: 150%;
+    font-weight: bold;
+    text-align: center;
+}
+
+div.homeTitle {
+    font-size: 150%;
+    font-weight: bold;
+    text-align: center;
+}
+
+div.homeWelcome {
+    font-size: 300%;
+    font-weight: bold;
+    text-align: center;
+    padding-bottom: 15px;
+}
+
+div.homeVerse {
+    font-style: italic;
+    text-align: center;
+    color: #003399;
+}
+
+div.homeRef {
+    text-align: center;
+    color: #003399;
+}
+
+img {
+    border: #000000 solid 2px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+img.inline {
+    display: inline;
+}
+
+div.ref {
+    font-size: 75%;
+}
+
+iframe {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+div.logo {
+    position: absolute;
+    background: #000000 url('../../uploads/logo2.jpg') no-repeat;
+    width: 150px;
+    height: 175px;
+}
+
+div.head {
+    margin-left: 150px;
+    background: #000000 url('../../pic/wholeclub.jpg') repeat-x;
+    border-color:#000000;
+    border-style:solid;
+    border-width: 0px 2px 2px 0px;
+    width: 610px;
+    height: 175px;
+}
+
+div.menu {
+    background-color: #000000;
+    display: block;
+    position: absolute;
+    top: 175px;
+    width: 150px;
+}
+
+div.bg {
+    background-color:#000000;
+    position: fixed;
+    width: 150px;
+    height: 100%;
+    z-index: -1;
+}
+
+div.menu a {
+    color: #000000;
+    display:block;
+    font-weight: bold;
+    font-size: 95%;
+    font-family: "Times New Roman";
+    text-align: center;
+    text-decoration: none;
+    background-color: #6699cc;
+    padding: 5px 0 5px 0;
+    margin: 2px 2px 2px 0px;
+}
+
+div.menu a:hover {
+    text-decoration: underline;
+    background-color: #ffcc66;
+}
+
+div.region {
+    background-color:#FFFFFF;
+    width: 610px;
+    border-color: #000000;
+    border-style: solid;
+    border-width: 0 2px 2px 0;
+    margin: 0 0 0 150px;
+    padding: 0 0 0 0;
+}
+
+div.content {
+    padding: 10px;
+}
+
+div.footer {
+    text-align: center;
+    font-size: 80%;
+    background-color: #999999;
+    margin: 0px;
+    padding: 3px 3px 3px 3px;
+}
+
+a {
+    color:blue;
+    text-decoration:none;
+}
+
+a:hover {
+    color:red;
+    text-decoration:underline;
+}
+
+a.black {
+    color:#000000;
+    text-decoration:none;
+}
+
+a.black:hover {
+    color:#000000;
+    text-decoration:underline;
+}
+
+span.warning {
+    color: #B22222;
+}
+
+#invalid {
+    display: none;
+}
+
+textarea {
+    width: 100%;
+}
+
+textarea:focus, input:focus, a:focus {
+    outline-style: none;
+    -moz-outline-style: none;
+}

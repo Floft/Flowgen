@@ -1,0 +1,1 @@
+<audio controls><source src="/uploads/music/{{plugin:1}}.flac" type="audio/flac" /><source src="/uploads/music/mp3/{{plugin:1}}.mp3" type="audio/mpeg" /></audio>

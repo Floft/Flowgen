@@ -1,0 +1,93 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>{{page:title}}</title>
+<meta http-equiv="Cache-control" content="public" />
+<style type="text/css">
+body {background: #8B0000; margin:0px;}
+div.header {position:absolute; left:140px; top:8px; height:93px; width:545px;}
+div.footer {position:relative; left:100px; top:81px; height:20px; width:600px; text-align:center;}
+
+div.lh {background:url("images/head.gif") 0 0; height:93px; width:15px; position:relative; left:0px;}
+div.h {color:#FFFFFF; font-weight:bold; font-size: 110%; background:url("images/head_center.gif") repeat-x; height:93px; width:515px; text-align:center; position:relative; left:15px; top:-93px; padding-top:8px;}
+div.rh {background:url("images/head.gif") 15px 0; height:93px; width:15px;  position:relative; left:530px; top:-194px;}
+
+div.tl {position:relative; left:-41px; top:-196px; background:url("images/corners.gif") 0 0; width:20px; height:20px; z-index:3;}
+div.tr {position:relative; left:561px; top:-216px; background:url("images/corners.gif") 20px 0; width:20px; height:20px; z-index:3;}
+div.bl {position:relative; left:-1px; top:0px; background:url("images/corners.gif") 0 20px; width:20px; height:20px; z-index:3;}
+div.br {position:relative; left:601px; top:-20px; background:url("images/corners.gif") 20px 20px; width:20px; height:20px; z-index:3;}
+
+div.menu {position:absolute; left:0px; top:123px; width:115px; z-index:2;}
+div.main {background: #FFFFFF; position:relative; left:100px; top:100px; padding:10px 0 15px 30px; width:590px;}
+div.inner {width:570px;}
+
+div.menu a {color:#000000; text-decoration:none; background:url("images/buttons.gif") no-repeat; display:block; width:115px; height:24px; text-align:center; margin-bottom: 3px; padding-top:3px;}
+div.menu a:hover {color:#FFFFFF; background:url("images/buttons.gif") 115px 0;}
+#current {font-weight:bold; text-decoration:underline;}
+
+//Credits: Dynamic Drive CSS Library - URL: http://www.dynamicdrive.com/style/
+.shadow {border:1px solid silver; z-index:3;}
+.shadow_inner{overflow:hidden; position:absolute; top:-1000px; filter:alpha(Opacity=10); opacity:0.1; z-index:-1;}
+
+<!--[if IE]>div.tl, div.tr, div.bl, div.br {display:none}<![endif]-->
+</style><script type="text/javascript">
+<!--
+gradientshadow={}
+gradientshadow.depth=0
+gradientshadow.containers=[]
+
+gradientshadow.create=function(){
+a=document.all?document.all:document.getElementsByTagName('*')
+for (i=0;i<a.length;i++) {
+	if (a[i].className=="shadow") {
+		for (x=0;x<gradientshadow.depth;x++){
+			newSd=document.createElement("DIV")
+			newSd.className = "shadow_inner"
+			newSd.id="shadow"+gradientshadow.containers.length+"_"+x
+			newSd.style.background="gray"
+			document.body.appendChild(newSd)
+		}
+	gradientshadow.containers[gradientshadow.containers.length]=a[i]
+	}
+}
+gradientshadow.position()
+}
+
+gradientshadow.position=function(){
+if (gradientshadow.containers.length>0){
+	for (var i=0; i<gradientshadow.containers.length; i++){
+		for (var x=0; x<gradientshadow.depth; x++){
+			shadowdiv=document.getElementById("shadow"+i+"_"+x)
+			shadowdiv.style.width = (gradientshadow.containers[i].offsetWidth) + "px"
+			shadowdiv.style.height = (gradientshadow.containers[i].offsetHeight) + "px"
+			shadowdiv.style.left = (gradientshadow.containers[i].offsetLeft+131) + x + "px"
+			shadowdiv.style.top = (gradientshadow.containers[i].offsetTop+110) + x + "px"
+		}
+	}
+}
+}
+
+if (window.addEventListener)
+window.addEventListener("load",gradientshadow.create,false)
+else if (window.attachEvent)
+window.attachEvent("onload",gradientshadow.create)
+else if (document.getElementById)
+window.onload=gradientshadow.create
+// -->
+</script>
+</head>
+<body>
+<div class="header">
+<div class="lh"></div>
+<div class="h">
+<img src="images/text.gif" alt="Spruced-Up Thrift Shop"><br />328 E. Fairhaven Ave., Burlington, WA 98233&nbsp;&nbsp;&nbsp;(360) 755-1141
+</div>
+<div class="rh"></div>
+<div class="tl"></div>
+<div class="tr"></div>
+</div>
+<div class="menu">{{page:menu}}</div>
+<div class="main">
+<div class="inner">

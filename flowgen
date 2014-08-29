@@ -135,6 +135,7 @@ applytheme() {
 	local url="$4"
 	local date="$5"
 	local options="$6"
+	local blog="$7"
 
 	#if the theme is "none", why waste processing power?
 	if [ "$theme" != "none" ]; then
@@ -149,6 +150,13 @@ applytheme() {
 		[ ! -e "$input/themes/$directory/$head" ] && warntheme "$input/themes/$directory/$head" "$theme" && return 1
 		[ ! -e "$input/themes/$directory/$foot" ] && warntheme "$input/themes/$directory/$foot" "$theme" && return 1
 
+		local footer_text="$(cat "$input/themes/$directory/$foot")"
+		# Show comments on the pages of the blog but not on the list of blog posts
+		#if [[ $blog == "1" ]] ; then
+		#	local disqus="$(applyplugin <<<"{{disqus:plugin}}")"
+		#	footer_text="$disqus $footer_text"
+		#fi
+
 		#Options: notitle
 		grep "notitle" <<<"$options" &>/dev/null && sedstr1='s#\{\{title}}.*\{\{/title\}\}##g' || sedstr1='s#\{\{/?title\}\}##g'
 		#Options: nocanonical
@@ -158,7 +166,7 @@ applytheme() {
 		sed -r "$sedstr1
 		$sedstr2" "$input/themes/$directory/$head" | tr -s '\r\n' | streplace "$title" "$url" "$date" > "$file"
 		applyplugin < "$tmp" >> "$file"
-		streplace "$title" "$url" "$date" < "$input/themes/$directory/$foot" >> "$file"
+		streplace "$title" "$url" "$date" <<< "$footer_text" >> "$file"
 
 		rm "$tmp"
 	fi
@@ -222,6 +230,8 @@ processfiles() {
 		fi
 
 		if [ -e "$file" ]; then
+			local isBlog=0
+
 			if getvars "$file"; then
 				((d)) && ((force)) && echo "Notice: processing $file"
 				local ext="$(sed 's/.*\.//g'<<<"$file")"
@@ -237,6 +247,7 @@ processfiles() {
 
 				#only show created date for blog; use rss template and blog post template
 				if grep "^/blog" <<<"$URL" &>/dev/null; then
+					isBlog="1"
 					local postBody="$(applyplugin <<<"$contents")"
 					local postBodyabsolute="$(sed -r "s#(src|href)=\"/#\1=\"http://$siteURL/#g"<<<"$postBody")"
 					local postDate="$(awk '{print strftime("%a, %d %b %Y %H:%M:%S %z",$1)}'<<<"$Created")"
@@ -279,7 +290,7 @@ EOF
 				#only process if updated
 				if [ "$force" == "1" ] || [ "$md5sum_new" != "$md5sum_old" ]; then
 					echo "$contents" > "$out"
-					applytheme "$out" "$Theme" "$Title" "$URL" "$Date" "$Options"
+					applytheme "$out" "$Theme" "$Title" "$URL" "$Date" "$Options" "$isBlog"
 					! ((force)) &&	echo "Notice: changed   - $file"
 				else
 					((d)) &&	echo "Notice: no change - $file"
@@ -424,7 +435,7 @@ for i in $positions; do
 
 	((d)) && echo "Notice: processing $blogURL page $loops"
 	echo "$out" >> "$input/$list.new"
-	applytheme "$out" default "$page_title" "/$blogURL/$loops" null notitle
+	applytheme "$out" default "$page_title" "/$blogURL/$loops" null notitle "0"
 	loops=$(($loops+1))
 done
 

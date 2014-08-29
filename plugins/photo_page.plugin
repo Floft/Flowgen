@@ -1,0 +1,1 @@
+<a href="/images/blog/{{plugin:1}}.jpg"><img src="/images/photo/{{plugin:1}}.jpg" alt="{{plugin:2}}" class="round" /></a>

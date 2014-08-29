@@ -11,10 +11,8 @@ class UpdateSearch extends Spider
 	private $sql;
 	private $table;
 	
-	protected function __construct($startURLs,$replaceURLs,$mysql=array())
+	public function __construct($startURLs,$replaceURLs,$mysql=array())
 	{
-		parent::__construct($startURLs,$replaceURLs);
-		
 		//connect to database
 		if (count($mysql) != 5)
 			die("Error: \$mysql = array(host, user, pass, db, table)\n");
@@ -24,6 +22,19 @@ class UpdateSearch extends Spider
 		
 		$this->table=$mysql[4];
 		$this->sql=$db;
+
+        //append previous URLs
+        $result = mysql_query("Select url from `" . $this->table . "`");
+        $count = mysql_numrows($result);
+
+        for ($i = 0; $i < $count; ++$i) {
+            $url = mysql_result($result, $i, "url");
+
+            // TODO: Makes it VERY slow, loads robots and sitemap for each page
+            array_push($startURLs, $url);
+        }
+
+		parent::__construct($startURLs,$replaceURLs);
 	}
 	
 	protected function use_data($url,$text,$html)
